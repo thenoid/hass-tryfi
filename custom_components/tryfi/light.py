@@ -84,7 +84,7 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
 class TryFiPetLight(CoordinatorEntity, LightEntity):
     def __init__(self, hass, pet, coordinator):
-        self._petId = pet.petId
+        self._petId = getattr(pet, "petId", None)
         self._hass = hass
         self._colorMap = {}
         device = getattr(pet, "device", None)
@@ -115,7 +115,8 @@ class TryFiPetLight(CoordinatorEntity, LightEntity):
 
     @property
     def petId(self):
-        return self._petId
+        pet = self.pet
+        return getattr(pet, "petId", self._petId)
 
     @property
     def pet(self):
