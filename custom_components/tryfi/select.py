@@ -52,8 +52,11 @@ class TryFiLostMode(CoordinatorEntity, SelectEntity):
 
     @property
     def current_option(self):
+        device = getattr(self.pet, "device", None)
+        if device is None:
+            return 'Safe'
         try:
-            return 'Lost' if self.pet.isLost else 'Safe'
+            return 'Lost' if device.isLost else 'Safe'
         except AttributeError:
             return 'Safe'
 

@@ -349,7 +349,8 @@ class TryFiBatterySensor(CoordinatorEntity, Entity):
 
     @property
     def isCharging(self):
-        return bool(self.pet.device.isCharging)
+        device = getattr(self.pet, "device", None)
+        return bool(getattr(device, "isCharging", False))
 
     @property
     def icon(self):
@@ -361,10 +362,8 @@ class TryFiBatterySensor(CoordinatorEntity, Entity):
     @property
     def batteryPercent(self):
         """Return the state of the sensor."""
-        try:
-            return self.pet.device.batteryPercent
-        except AttributeError:
-            return None
+        device = getattr(self.pet, "device", None)
+        return getattr(device, "batteryPercent", None)
 
     @property
     def state(self):

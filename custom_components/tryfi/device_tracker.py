@@ -81,10 +81,8 @@ class TryFiPetTracker(CoordinatorEntity, TrackerEntity):
 
     @property
     def battery_level(self):
-        try:
-            return self.pet.device.batteryPercent
-        except AttributeError:
-            return None
+        device = getattr(self.pet, "device", None)
+        return getattr(device, "batteryPercent", None)
 
     @property
     def device_info(self):
