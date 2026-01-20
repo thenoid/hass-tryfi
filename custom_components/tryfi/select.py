@@ -62,12 +62,13 @@ class TryFiLostMode(CoordinatorEntity, SelectEntity):
 
     @property
     def device_info(self):
+        device = getattr(self.pet, "device", None)
         return {
             "identifiers": {(DOMAIN, self.pet.petId)},
             "name": self.pet.name,
             "manufacturer": "TryFi",
             "model": self.pet.breed,
-            "sw_version": self.pet.device.buildId,
+            "sw_version": getattr(device, "buildId", None),
         }
     
     def select_option(self, option):
