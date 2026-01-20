@@ -109,7 +109,9 @@ class TryFiPetLight(CoordinatorEntity, LightEntity):
 
     @property
     def name(self):
-        return f"{self.pet.name} - Collar Light"
+        pet = self.pet
+        pet_name = getattr(pet, "name", "Unknown")
+        return f"{pet_name} - Collar Light"
 
     @property
     def petId(self):
@@ -125,7 +127,9 @@ class TryFiPetLight(CoordinatorEntity, LightEntity):
 
     @property
     def unique_id(self):
-        return f"{self.pet.petId}-light"
+        pet = self.pet
+        pet_id = getattr(pet, "petId", self._petId)
+        return f"{pet_id}-light"
 
     @property
     def device_id(self):
@@ -161,12 +165,13 @@ class TryFiPetLight(CoordinatorEntity, LightEntity):
 
     @property
     def device_info(self):
-        device = getattr(self.pet, "device", None)
+        pet = self.pet
+        device = getattr(pet, "device", None)
         return {
-            "identifiers": {(DOMAIN, self.pet.petId)},
-            "name": self.pet.name,
+            "identifiers": {(DOMAIN, getattr(pet, "petId", self._petId))},
+            "name": getattr(pet, "name", "Unknown"),
             "manufacturer": "TryFi",
-            "model": self.pet.breed,
+            "model": getattr(pet, "breed", None),
             "sw_version": getattr(device, "buildId", None),
         }
 
