@@ -64,15 +64,21 @@ class TryFiPetTracker(CoordinatorEntity, TrackerEntity):
 
     @property
     def entity_picture(self):
-        return self.pet.photoLink
+        return getattr(self.pet, "photoLink", None)
 
     @property
     def latitude(self):
-        return float(self.pet.currLatitude)
+        latitude = getattr(self.pet, "currLatitude", None)
+        if latitude is None:
+            return None
+        return float(latitude)
 
     @property
     def longitude(self):
-        return float(self.pet.currLongitude)
+        longitude = getattr(self.pet, "currLongitude", None)
+        if longitude is None:
+            return None
+        return float(longitude)
 
     @property
     def source_type(self):
