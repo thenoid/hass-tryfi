@@ -18,7 +18,13 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     new_devices = []
     for pet in tryfi.pets:
-        LOGGER.debug(f"Adding Pet Battery Charging Binary Sensor: {pet}")
+        pet_name = getattr(pet, "name", "unknown")
+        pet_id = getattr(pet, "petId", "unknown")
+        LOGGER.debug(
+            "Adding Pet Battery Charging Binary Sensor for %s (%s)",
+            pet_name,
+            pet_id,
+        )
         new_devices.append(TryFiBatteryChargingBinarySensor(hass, pet, coordinator))
     if new_devices:
         async_add_devices(new_devices)
@@ -34,12 +40,16 @@ class TryFiBatteryChargingBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def name(self):
         """Return the name of the binary sensor."""
-        return f"{self.pet.name} Collar Battery Charging"
+        pet = self.pet
+        pet_name = getattr(pet, "name", "Unknown")
+        return f"{pet_name} Collar Battery Charging"
 
     @property
     def unique_id(self):
         """Return the ID of this sensor."""
-        return f"{self.pet.petId}-battery-charging"
+        pet = self.pet
+        pet_id = getattr(pet, "petId", self._petId)
+        return f"{pet_id}-battery-charging"
 
     @property
     def petId(self):
@@ -51,7 +61,7 @@ class TryFiBatteryChargingBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def device(self):
-        return self.pet.device
+        return getattr(self.pet, "device", None)
 
     @property
     def device_id(self):
@@ -64,7 +74,8 @@ class TryFiBatteryChargingBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def isCharging(self):
-        return bool(self.pet.device.isCharging)
+        device = getattr(self.pet, "device", None)
+        return bool(getattr(device, "isCharging", False))
 
     @property
     def icon(self):
@@ -81,10 +92,12 @@ class TryFiBatteryChargingBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def device_info(self):
+        pet = self.pet
+        device = getattr(pet, "device", None)
         return {
-            "identifiers": {(DOMAIN, self.pet.petId)},
-            "name": self.pet.name,
+            "identifiers": {(DOMAIN, getattr(pet, "petId", self._petId))},
+            "name": getattr(pet, "name", "Unknown"),
             "manufacturer": "TryFi",
-            "model": self.pet.breed,
-            "sw_version": self.pet.device.buildId,
+            "model": getattr(pet, "breed", None),
+            "sw_version": getattr(device, "buildId", None),
         }

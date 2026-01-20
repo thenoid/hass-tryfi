@@ -32,15 +32,31 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     new_devices = []
     for pet in tryfi.pets:
-        LOGGER.debug(f"Adding Pet Battery Sensor: {pet}")
+        pet_name = getattr(pet, "name", "unknown")
+        pet_id = getattr(pet, "petId", "unknown")
+        LOGGER.debug(
+            "Adding Pet Battery Sensor for %s (%s)",
+            pet_name,
+            pet_id,
+        )
         new_devices.append(TryFiBatterySensor(hass, pet, coordinator))
         for statType in SENSOR_STATS_BY_TYPE:
             for statTime in SENSOR_STATS_BY_TIME:
-                LOGGER.debug(f"Adding Pet Stat: {pet}")
+                LOGGER.debug(
+                    "Adding Pet Stat for %s (%s) [%s/%s]",
+                    pet_name,
+                    pet_id,
+                    statType,
+                    statTime,
+                )
                 new_devices.append(
                     PetStatsSensor(hass, pet, coordinator, statType, statTime)
                 )
-        LOGGER.debug(f"Adding Pet Generic Sensor: {pet}")
+        LOGGER.debug(
+            "Adding Pet Generic Sensor for %s (%s)",
+            pet_name,
+            pet_id,
+        )
         new_devices.append(PetGenericSensor(hass, pet, coordinator, "Activity Type"))
         new_devices.append(PetGenericSensor(hass, pet, coordinator, "Current Place Name"))
         new_devices.append(PetGenericSensor(hass, pet, coordinator, "Current Place Address"))
@@ -48,7 +64,9 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         
 
     for base in tryfi.bases:
-        LOGGER.debug(f"Adding Base: {base}")
+        base_name = getattr(base, "name", "unknown")
+        base_id = getattr(base, "baseId", "unknown")
+        LOGGER.debug("Adding Base %s (%s)", base_name, base_id)
         new_devices.append(TryFiBaseSensor(hass, base, coordinator))
     if new_devices:
         async_add_devices(new_devices)
@@ -65,12 +83,16 @@ class TryFiBaseSensor(CoordinatorEntity, Entity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{self.base.name}"
+        base = self.base
+        base_name = getattr(base, "name", "Unknown")
+        return f"{base_name}"
 
     @property
     def unique_id(self):
         """Return the ID of this sensor."""
-        return f"{self.base.baseId}"
+        base = self.base
+        base_id = getattr(base, "baseId", self._baseId)
+        return f"{base_id}"
 
     @property
     def baseId(self):
@@ -91,10 +113,10 @@ class TryFiBaseSensor(CoordinatorEntity, Entity):
 
     @property
     def state(self):
-        if self.base.online:
+        base = self.base
+        if getattr(base, "online", False):
             return "Online"
-        else:
-            return "Offline"
+        return "Offline"
 
     @property
     def icon(self):
@@ -102,9 +124,10 @@ class TryFiBaseSensor(CoordinatorEntity, Entity):
 
     @property
     def device_info(self):
+        base = self.base
         return {
-            "identifiers": {(DOMAIN, self.base.baseId)},
-            "name": self.base.name,
+            "identifiers": {(DOMAIN, getattr(base, "baseId", self._baseId))},
+            "name": getattr(base, "name", "Unknown"),
             "manufacturer": "TryFi",
             "model": "TryFi Base",
             # "sw_version": self.pet.device.buildId,
@@ -130,13 +153,17 @@ class PetGenericSensor(CoordinatorEntity, Entity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{self.pet.name} {self.statType.title()}"
+        pet = self.pet
+        pet_name = getattr(pet, "name", "Unknown")
+        return f"{pet_name} {self.statType.title()}"
 
     @property
     def unique_id(self):
         """Return the ID of this sensor."""
         formattedType = self.statType.lower().replace(" ", "-")
-        return f"{self.pet.petId}-{formattedType}"
+        pet = self.pet
+        pet_id = getattr(pet, "petId", self._petId)
+        return f"{pet_id}-{formattedType}"
 
     @property
     def petId(self):
@@ -148,7 +175,7 @@ class PetGenericSensor(CoordinatorEntity, Entity):
 
     @property
     def device(self):
-        return self.pet.device
+        return getattr(self.pet, "device", None)
 
     @property
     def device_id(self):
@@ -172,26 +199,37 @@ class PetGenericSensor(CoordinatorEntity, Entity):
 
     @property
     def state(self):
+        pet = self.pet
+        if pet is None:
+            return None
         if self.statType == "Activity Type":
-            return self.pet.getActivityType()
+            return pet.getActivityType()
         elif self.statType == "Current Place Name":
-            return self.pet.getCurrPlaceName()
+            return pet.getCurrPlaceName()
         elif self.statType == "Current Place Address":
-            return self.pet.getCurrPlaceAddress()
+            return pet.getCurrPlaceAddress()
         elif self.statType == "Connected To":
-            return self.pet.device.connectionStateType
+            device = getattr(pet, "device", None)
+            if device is None:
+                return None
+            try:
+                return device.connectionStateType
+            except AttributeError:
+                return None
     @property
     def unit_of_measurement(self):
         return None
 
     @property
     def device_info(self):
+        pet = self.pet
+        device = getattr(pet, "device", None)
         return {
-            "identifiers": {(DOMAIN, self.pet.petId)},
-            "name": self.pet.name,
+            "identifiers": {(DOMAIN, getattr(pet, "petId", self._petId))},
+            "name": getattr(pet, "name", "Unknown"),
             "manufacturer": "TryFi",
-            "model": self.pet.breed,
-            "sw_version": self.pet.device.buildId,
+            "model": getattr(pet, "breed", None),
+            "sw_version": getattr(device, "buildId", None),
         }
 
 class PetStatsSensor(CoordinatorEntity, Entity):
@@ -215,12 +253,16 @@ class PetStatsSensor(CoordinatorEntity, Entity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{self.pet.name} {self.statTime.title()} {self.statType.title()}"
+        pet = self.pet
+        pet_name = getattr(pet, "name", "Unknown")
+        return f"{pet_name} {self.statTime.title()} {self.statType.title()}"
 
     @property
     def unique_id(self):
         """Return the ID of this sensor."""
-        return f"{self.pet.petId}-{self.statTime.lower()}-{self.statType.lower()}"
+        pet = self.pet
+        pet_id = getattr(pet, "petId", self._petId)
+        return f"{pet_id}-{self.statTime.lower()}-{self.statType.lower()}"
 
     @property
     def petId(self):
@@ -232,7 +274,7 @@ class PetStatsSensor(CoordinatorEntity, Entity):
 
     @property
     def device(self):
-        return self.pet.device
+        return getattr(self.pet, "device", None)
 
     @property
     def device_id(self):
@@ -249,34 +291,64 @@ class PetStatsSensor(CoordinatorEntity, Entity):
 
     @property
     def state(self):
+        pet = self.pet
+        if pet is None:
+            return None
         if self.statType.upper() == "STEPS":
             if self.statTime.upper() == "DAILY":
-                return self.pet.dailySteps
+                return getattr(pet, "dailySteps", None)
             elif self.statTime.upper() == "WEEKLY":
-                return self.pet.weeklySteps
+                return getattr(pet, "weeklySteps", None)
             elif self.statTime.upper() == "MONTHLY":
-                return self.pet.monthlySteps
+                return getattr(pet, "monthlySteps", None)
         elif self.statType.upper() == "DISTANCE":
             if self.statTime.upper() == "DAILY":
-                return round(self.pet.dailyTotalDistance / 1000, 2)
+                distance = getattr(pet, "dailyTotalDistance", None)
+                if distance is None:
+                    return None
+                return round(distance / 1000, 2)
             elif self.statTime.upper() == "WEEKLY":
-                return round(self.pet.weeklyTotalDistance / 1000, 2)
+                distance = getattr(pet, "weeklyTotalDistance", None)
+                if distance is None:
+                    return None
+                return round(distance / 1000, 2)
             elif self.statTime.upper() == "MONTHLY":
-                return round(self.pet.monthlyTotalDistance / 1000, 2)
+                distance = getattr(pet, "monthlyTotalDistance", None)
+                if distance is None:
+                    return None
+                return round(distance / 1000, 2)
         elif self.statType.upper() == "NAP":
             if self.statTime.upper() == "DAILY":
-                return round(self.pet.dailyNap / 60, 2)
+                nap = getattr(pet, "dailyNap", None)
+                if nap is None:
+                    return None
+                return round(nap / 60, 2)
             elif self.statTime.upper() == "WEEKLY":
-                return round(self.pet.weeklyNap / 60, 2)
+                nap = getattr(pet, "weeklyNap", None)
+                if nap is None:
+                    return None
+                return round(nap / 60, 2)
             elif self.statTime.upper() == "MONTHLY":
-                return round(self.pet.monthlyNap / 60, 2)
+                nap = getattr(pet, "monthlyNap", None)
+                if nap is None:
+                    return None
+                return round(nap / 60, 2)
         elif self.statType.upper() == "SLEEP":
             if self.statTime.upper() == "DAILY":
-                return round(self.pet.dailySleep / 60, 2)
+                sleep = getattr(pet, "dailySleep", None)
+                if sleep is None:
+                    return None
+                return round(sleep / 60, 2)
             elif self.statTime.upper() == "WEEKLY":
-                return round(self.pet.weeklySleep / 60, 2)
+                sleep = getattr(pet, "weeklySleep", None)
+                if sleep is None:
+                    return None
+                return round(sleep / 60, 2)
             elif self.statTime.upper() == "MONTHLY":
-                return round(self.pet.monthlySleep / 60, 2)
+                sleep = getattr(pet, "monthlySleep", None)
+                if sleep is None:
+                    return None
+                return round(sleep / 60, 2)
         else:
             return None
 
@@ -294,12 +366,14 @@ class PetStatsSensor(CoordinatorEntity, Entity):
 
     @property
     def device_info(self):
+        pet = self.pet
+        device = getattr(pet, "device", None)
         return {
-            "identifiers": {(DOMAIN, self.pet.petId)},
-            "name": self.pet.name,
+            "identifiers": {(DOMAIN, getattr(pet, "petId", self._petId))},
+            "name": getattr(pet, "name", "Unknown"),
             "manufacturer": "TryFi",
-            "model": self.pet.breed,
-            "sw_version": self.pet.device.buildId,
+            "model": getattr(pet, "breed", None),
+            "sw_version": getattr(device, "buildId", None),
         }
 
 
@@ -314,12 +388,16 @@ class TryFiBatterySensor(CoordinatorEntity, Entity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return f"{self.pet.name} Collar Battery Level"
+        pet = self.pet
+        pet_name = getattr(pet, "name", "Unknown")
+        return f"{pet_name} Collar Battery Level"
 
     @property
     def unique_id(self):
         """Return the ID of this sensor."""
-        return f"{self.pet.petId}-battery"
+        pet = self.pet
+        pet_id = getattr(pet, "petId", self._petId)
+        return f"{pet_id}-battery"
 
     @property
     def petId(self):
@@ -331,7 +409,7 @@ class TryFiBatterySensor(CoordinatorEntity, Entity):
 
     @property
     def device(self):
-        return self.pet.device
+        return getattr(self.pet, "device", None)
 
     @property
     def device_id(self):
@@ -349,7 +427,9 @@ class TryFiBatterySensor(CoordinatorEntity, Entity):
 
     @property
     def isCharging(self):
-        return bool(self.pet.device.isCharging)
+        pet = self.pet
+        device = getattr(pet, "device", None)
+        return bool(getattr(device, "isCharging", False))
 
     @property
     def icon(self):
@@ -361,7 +441,9 @@ class TryFiBatterySensor(CoordinatorEntity, Entity):
     @property
     def batteryPercent(self):
         """Return the state of the sensor."""
-        return self.pet.device.batteryPercent
+        pet = self.pet
+        device = getattr(pet, "device", None)
+        return getattr(device, "batteryPercent", None)
 
     @property
     def state(self):
@@ -369,10 +451,12 @@ class TryFiBatterySensor(CoordinatorEntity, Entity):
 
     @property
     def device_info(self):
+        pet = self.pet
+        device = getattr(pet, "device", None)
         return {
-            "identifiers": {(DOMAIN, self.pet.petId)},
-            "name": self.pet.name,
+            "identifiers": {(DOMAIN, getattr(pet, "petId", self._petId))},
+            "name": getattr(pet, "name", "Unknown"),
             "manufacturer": "TryFi",
-            "model": self.pet.breed,
-            "sw_version": self.pet.device.buildId,
+            "model": getattr(pet, "breed", None),
+            "sw_version": getattr(device, "buildId", None),
         }

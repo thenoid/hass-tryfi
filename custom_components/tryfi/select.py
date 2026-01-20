@@ -24,7 +24,9 @@ class TryFiLostMode(CoordinatorEntity, SelectEntity):
 
     @property
     def name(self):
-        return f"{self.pet.name} Lost Mode"
+        pet = self.pet
+        pet_name = getattr(pet, "name", "Unknown")
+        return f"{pet_name} Lost Mode"
 
     @property
     def petId(self):
@@ -40,7 +42,9 @@ class TryFiLostMode(CoordinatorEntity, SelectEntity):
 
     @property
     def unique_id(self):
-        return f"{self.pet.petId}-lost"
+        pet = self.pet
+        pet_id = getattr(pet, "petId", self._petId)
+        return f"{pet_id}-lost"
 
     @property
     def device_id(self):
@@ -52,19 +56,24 @@ class TryFiLostMode(CoordinatorEntity, SelectEntity):
 
     @property
     def current_option(self):
-        if self.pet.isLost:
-            return 'Lost'
-        else:
+        device = getattr(self.pet, "device", None)
+        if device is None:
+            return 'Safe'
+        try:
+            return 'Lost' if device.isLost else 'Safe'
+        except AttributeError:
             return 'Safe'
 
     @property
     def device_info(self):
+        pet = self.pet
+        device = getattr(pet, "device", None)
         return {
-            "identifiers": {(DOMAIN, self.pet.petId)},
-            "name": self.pet.name,
+            "identifiers": {(DOMAIN, getattr(pet, "petId", self._petId))},
+            "name": getattr(pet, "name", "Unknown"),
             "manufacturer": "TryFi",
-            "model": self.pet.breed,
-            "sw_version": self.pet.device.buildId,
+            "model": getattr(pet, "breed", None),
+            "sw_version": getattr(device, "buildId", None),
         }
     
     def select_option(self, option):

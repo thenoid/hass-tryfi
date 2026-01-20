@@ -44,7 +44,9 @@ class TryFiPetTracker(CoordinatorEntity, TrackerEntity):
 
     @property
     def name(self):
-        return f"{self.pet.name} Tracker"
+        pet = self.pet
+        pet_name = getattr(pet, "name", "Unknown")
+        return f"{pet_name} Tracker"
 
     @property
     def pet(self):
@@ -56,7 +58,9 @@ class TryFiPetTracker(CoordinatorEntity, TrackerEntity):
 
     @property
     def unique_id(self):
-        return f"{self.pet.petId}-tracker"
+        pet = self.pet
+        pet_id = getattr(pet, "petId", self._petId)
+        return f"{pet_id}-tracker"
 
     @property
     def device_id(self):
@@ -64,15 +68,21 @@ class TryFiPetTracker(CoordinatorEntity, TrackerEntity):
 
     @property
     def entity_picture(self):
-        return self.pet.photoLink
+        return getattr(self.pet, "photoLink", None)
 
     @property
     def latitude(self):
-        return float(self.pet.currLatitude)
+        latitude = getattr(self.pet, "currLatitude", None)
+        if latitude is None:
+            return None
+        return float(latitude)
 
     @property
     def longitude(self):
-        return float(self.pet.currLongitude)
+        longitude = getattr(self.pet, "currLongitude", None)
+        if longitude is None:
+            return None
+        return float(longitude)
 
     @property
     def source_type(self):
@@ -81,14 +91,17 @@ class TryFiPetTracker(CoordinatorEntity, TrackerEntity):
 
     @property
     def battery_level(self):
-        return self.pet.device.batteryPercent
+        device = getattr(self.pet, "device", None)
+        return getattr(device, "batteryPercent", None)
 
     @property
     def device_info(self):
+        pet = self.pet
+        device = getattr(pet, "device", None)
         return {
-            "identifiers": {(DOMAIN, self.pet.petId)},
-            "name": self.pet.name,
+            "identifiers": {(DOMAIN, getattr(pet, "petId", self._petId))},
+            "name": getattr(pet, "name", "Unknown"),
             "manufacturer": "TryFi",
-            "model": self.pet.breed,
-            "sw_version": self.pet.device.buildId,
+            "model": getattr(pet, "breed", None),
+            "sw_version": getattr(device, "buildId", None),
         }

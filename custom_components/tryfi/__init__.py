@@ -43,6 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # sucessful login before continuing with setup. When not successful,
     # hass will continue to retry setup
     if not hasattr(tryfi, 'currentUser'):
+        LOGGER.error("TryFi login missing currentUser; check credentials or API response")
         raise ConfigEntryNotReady
 
     coordinator = TryFiDataUpdateCoordinator(hass, tryfi, int(entry.data["polling"]))
@@ -118,7 +119,34 @@ class TryFiDataUpdateCoordinator(DataUpdateCoordinator):
         """Update data via library."""
         try:
             await self._hass.async_add_executor_job(self.tryfi.update)
+            self._log_missing_device_attributes()
         except Exception as error:
             LOGGER.error("Error updating TryFi data\n{error}")
             raise UpdateFailed(error) from error
         return self.tryfi
+
+    def _log_missing_device_attributes(self):
+        if not LOGGER.isEnabledFor(logging.DEBUG):
+            return
+        pets = getattr(self.tryfi, "pets", None)
+        if not pets:
+            LOGGER.debug("TryFi update returned no pets data")
+            return
+        for pet in pets:
+            device = getattr(pet, "device", None)
+            pet_name = getattr(pet, "name", "unknown")
+            pet_id = getattr(pet, "petId", "unknown")
+            if device is None:
+                LOGGER.debug("TryFi pet %s (%s) missing device data", pet_name, pet_id)
+                continue
+            missing = []
+            for attr_name in ("batteryPercent", "isLost", "isCharging", "buildId"):
+                if not hasattr(device, attr_name):
+                    missing.append(attr_name)
+            if missing:
+                LOGGER.debug(
+                    "TryFi device data missing for pet %s (%s): %s",
+                    pet_name,
+                    pet_id,
+                    ", ".join(missing),
+                )
