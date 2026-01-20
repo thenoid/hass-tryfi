@@ -18,7 +18,13 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     new_devices = []
     for pet in tryfi.pets:
-        LOGGER.debug(f"Adding Pet Battery Charging Binary Sensor: {pet}")
+        pet_name = getattr(pet, "name", "unknown")
+        pet_id = getattr(pet, "petId", "unknown")
+        LOGGER.debug(
+            "Adding Pet Battery Charging Binary Sensor for %s (%s)",
+            pet_name,
+            pet_id,
+        )
         new_devices.append(TryFiBatteryChargingBinarySensor(hass, pet, coordinator))
     if new_devices:
         async_add_devices(new_devices)
@@ -64,7 +70,8 @@ class TryFiBatteryChargingBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def isCharging(self):
-        return bool(self.pet.device.isCharging)
+        device = getattr(self.pet, "device", None)
+        return bool(getattr(device, "isCharging", False))
 
     @property
     def icon(self):
