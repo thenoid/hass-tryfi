@@ -197,7 +197,13 @@ class PetGenericSensor(CoordinatorEntity, Entity):
         elif self.statType == "Current Place Address":
             return self.pet.getCurrPlaceAddress()
         elif self.statType == "Connected To":
-            return self.pet.device.connectionStateType
+            device = getattr(self.pet, "device", None)
+            if device is None:
+                return None
+            try:
+                return device.connectionStateType
+            except AttributeError:
+                return None
     @property
     def unit_of_measurement(self):
         return None
