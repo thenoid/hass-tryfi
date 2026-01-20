@@ -52,9 +52,9 @@ class TryFiLostMode(CoordinatorEntity, SelectEntity):
 
     @property
     def current_option(self):
-        if self.pet.isLost:
-            return 'Lost'
-        else:
+        try:
+            return 'Lost' if self.pet.isLost else 'Safe'
+        except AttributeError:
             return 'Safe'
 
     @property

@@ -361,7 +361,10 @@ class TryFiBatterySensor(CoordinatorEntity, Entity):
     @property
     def batteryPercent(self):
         """Return the state of the sensor."""
-        return self.pet.device.batteryPercent
+        try:
+            return self.pet.device.batteryPercent
+        except AttributeError:
+            return None
 
     @property
     def state(self):
