@@ -32,15 +32,31 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
 
     new_devices = []
     for pet in tryfi.pets:
-        LOGGER.debug(f"Adding Pet Battery Sensor: {pet}")
+        pet_name = getattr(pet, "name", "unknown")
+        pet_id = getattr(pet, "petId", "unknown")
+        LOGGER.debug(
+            "Adding Pet Battery Sensor for %s (%s)",
+            pet_name,
+            pet_id,
+        )
         new_devices.append(TryFiBatterySensor(hass, pet, coordinator))
         for statType in SENSOR_STATS_BY_TYPE:
             for statTime in SENSOR_STATS_BY_TIME:
-                LOGGER.debug(f"Adding Pet Stat: {pet}")
+                LOGGER.debug(
+                    "Adding Pet Stat for %s (%s) [%s/%s]",
+                    pet_name,
+                    pet_id,
+                    statType,
+                    statTime,
+                )
                 new_devices.append(
                     PetStatsSensor(hass, pet, coordinator, statType, statTime)
                 )
-        LOGGER.debug(f"Adding Pet Generic Sensor: {pet}")
+        LOGGER.debug(
+            "Adding Pet Generic Sensor for %s (%s)",
+            pet_name,
+            pet_id,
+        )
         new_devices.append(PetGenericSensor(hass, pet, coordinator, "Activity Type"))
         new_devices.append(PetGenericSensor(hass, pet, coordinator, "Current Place Name"))
         new_devices.append(PetGenericSensor(hass, pet, coordinator, "Current Place Address"))
@@ -48,7 +64,9 @@ async def async_setup_entry(hass, config_entry, async_add_devices):
         
 
     for base in tryfi.bases:
-        LOGGER.debug(f"Adding Base: {base}")
+        base_name = getattr(base, "name", "unknown")
+        base_id = getattr(base, "baseId", "unknown")
+        LOGGER.debug("Adding Base %s (%s)", base_name, base_id)
         new_devices.append(TryFiBaseSensor(hass, base, coordinator))
     if new_devices:
         async_add_devices(new_devices)

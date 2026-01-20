@@ -86,8 +86,24 @@ class TryFiPetLight(CoordinatorEntity, LightEntity):
     def __init__(self, hass, pet, coordinator):
         self._petId = pet.petId
         self._hass = hass
-
-        self._colorMap = {ledColor.ledColorCode: hex_to_rgb(ledColor.hexCode) for ledColor in pet.device.availableLedColors}
+        self._colorMap = {}
+        device = getattr(pet, "device", None)
+        if device is not None:
+            try:
+                available_colors = device.availableLedColors or []
+            except AttributeError:
+                available_colors = []
+                pet_name = getattr(pet, "name", "unknown")
+                pet_id = getattr(pet, "petId", "unknown")
+                LOGGER.debug(
+                    "TryFi device missing availableLedColors for %s (%s)",
+                    pet_name,
+                    pet_id,
+                )
+            self._colorMap = {
+                ledColor.ledColorCode: hex_to_rgb(ledColor.hexCode)
+                for ledColor in available_colors
+            }
 
         super().__init__(coordinator)
 
@@ -117,7 +133,13 @@ class TryFiPetLight(CoordinatorEntity, LightEntity):
 
     @property
     def is_on(self):
-        return bool(self.pet.device.ledOn)
+        device = getattr(self.pet, "device", None)
+        if device is None:
+            return False
+        try:
+            return bool(device.ledOn)
+        except AttributeError:
+            return False
 
     @property
     def supported_color_modes(self):
@@ -129,7 +151,13 @@ class TryFiPetLight(CoordinatorEntity, LightEntity):
 
     @property
     def rgb_color(self):
-        return hex_to_rgb(self.pet.device.ledColorHex)
+        device = getattr(self.pet, "device", None)
+        if device is None:
+            return (255, 255, 255)
+        try:
+            return hex_to_rgb(device.ledColorHex)
+        except AttributeError:
+            return (255, 255, 255)
 
     @property
     def device_info(self):
@@ -146,6 +174,13 @@ class TryFiPetLight(CoordinatorEntity, LightEntity):
         self.pet.turnOnOffLed(self.tryfi.session, True)
 
         if "rgb_color" in kwargs:
+            if not self._colorMap:
+                LOGGER.debug(
+                    "TryFi LED color map unavailable for pet %s (%s)",
+                    getattr(self.pet, "name", "unknown"),
+                    getattr(self.pet, "petId", "unknown"),
+                )
+                return
             # This is set when the color is changed
             # if the brightness(which is a no-op) is changed, for example, this is not set
             requested_color = kwargs["rgb_color"]
